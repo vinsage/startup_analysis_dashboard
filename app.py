@@ -3,7 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 
-st.set_page_config(layout='wide', page_title='startup Analysis')
+st.set_page_config(layout='wide', page_title='Startup Analysis')
 df = pd.read_csv('startup_cleaned.csv')
 df['date']= pd.to_datetime(df['date'], errors = 'coerce')
 df['month']= df['date'].dt.month
@@ -12,9 +12,35 @@ df['month']= df['month'].astype(np.int64)
 df['year'] = df['date'].dt.year
 df['year']= df['year'].fillna(0)
 df['year']= df['year'].astype(np.int64)
-df['vertical']= df['vertical'].replace(['ECommerce'],'eCommerce')
-df['vertical']= df['vertical'].replace(['E-Commerce'],'eCommerce')
-df['vertical']= df['vertical'].replace(['ecommerce'],'eCommerce')
+
+
+def load_startup_analysis(startup):
+    col1, col2, col3 = st.columns([1,2,2])
+    with col1:
+        st.metric("Name of Startup", startup)
+    with col2:
+        startup_verti = str(df[df['startup'].str.contains(startup)].head()[
+            ['date', 'vertical', 'subvertical', 'city', 'round', 'amount']]['vertical'].values[0])
+        st.metric("Type of Industry", startup_verti)
+    with col3:
+        startup_subverti = str(df[df['startup'].str.contains(startup)].head()[
+                                ['date', 'vertical', 'subvertical', 'city', 'round', 'amount']]['subvertical'].values[0])
+        st.metric("Type of Subindustry", startup_subverti)
+
+    col4, col5, col6 = st.columns([1,2,2])
+    with col4:
+        startup_city = str(df[df['startup'].str.contains(startup)].head()[
+                                ['date', 'vertical', 'subvertical', 'city', 'round', 'amount']]['city'].values[0])
+        st.metric("Location of Startup", startup_city)
+
+    with col5:
+        startup_investor =str(df[df['startup'].str.contains(startup)].head()[['investors']]['investors'].values[0])
+        st.metric("Name of Investor", startup_investor)
+    with col6:
+        startup_round = str(df[df['startup'].str.contains(startup)].head()[['round']]['round'].values[0])
+        st.metric("Type of Investment", startup_round)
+
+
 
 def load_overall_analysis():
     st.title("Overall Analysis")
@@ -67,24 +93,16 @@ def load_overall_analysis():
         df_funding =df.groupby('round')['startup'].count().sort_values(ascending= False).head(15)
         st.line_chart(df_funding)
     with col9:
-        st.header('Location of cities')
-        sr_city = df.groupby('city')['round'].count().sort_values(ascending=False).head(15)
-        df_city = sr_city.to_frame()
-        df_city = df_city.assign(
-            lat=[12.120000, 19.155001, 28.679079, 30.172716, 12.120000, 18.5204, 17.3850, 13.0827, 28.5355, 30.172716,
-                 22.728392, 26.9124, 28.679079, 22.5726, 22.7196],
-            lon=[76.680000, 72.849998, 77.069710, 77.299492, 76.680000, 73.8567, 78.4867, 80.2707, 77.3910, 77.299492,
-                 71.637077, 75.7873, 77.069710, 88.3639, 75.8577])
-        st.map(df_city)
+        st.header('Top Startups')
+        startup_series = df.groupby('startup')['amount'].sum().sort_values(ascending=False).head(10).index
+        st.write(startup_series)
+
     col10, col11 = st.columns(2)
     with col10:
         st.header('Top Investors')
         sr_investors = df.groupby('investors')['amount'].count().sort_values(ascending=False).head(10)
         st.area_chart(sr_investors)
-    with col11:
-        st.header('Top Startups')
-        startup_series= df.groupby('startup')['amount'].sum().sort_values(ascending= False).head(10).index
-        st.write(startup_series)
+
 def load_investor_details(investor):
     st.title(investor)
 #load the recent five investment
@@ -145,6 +163,8 @@ def load_investor_details(investor):
         st.pyplot(fig4)
 
 st.title('Startup Dashboard')
+
+
 st.sidebar.title('Startup Funding Analysis')
 option = st.sidebar.selectbox('Select One', ['Overall Analysis', 'Startup', 'Investor'])
 if option == 'Overall Analysis':
@@ -152,9 +172,11 @@ if option == 'Overall Analysis':
 
 
 elif option == 'Startup':
-    st.sidebar.selectbox('Select Startup', sorted(df['startup'].unique().tolist()))
+    selected_startup = st.sidebar.selectbox('Select Startup', sorted(df['startup'].unique().tolist()))
     btn1 = st.sidebar.button('Find Startup Details')
     st.title('StartUp Analysis')
+    if btn1:
+        load_startup_analysis(selected_startup)
     
 else:
     selected_investor = st.sidebar.selectbox('Select Startup', sorted(set(df['investors'].str.split(',').sum())))
